@@ -1,0 +1,142 @@
+import { Page, Locator, expect } from '@playwright/test';
+import { BasePage } from './BasePage';
+
+export interface CartItem {
+  name: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+}
+
+export class CartPage extends BasePage {
+  private readonly cartTable: Locator;
+  private readonly totalElement: Locator;
+
+  constructor(page: Page) {
+    super(page, '/cart');
+    this.cartTable = page.locator('table');
+    this.totalElement = page.locator('.total');
+  }
+
+  /*async getCartItems(): Promise<CartItem[]> {
+    const items: CartItem[] = [];
+    const rows = this.cartTable.locator('tbody tr');
+    const count = await rows.count();
+
+    for (let i = 0; i < count; i++) {
+      const row = rows.nth(i);
+      const name = await row.locator('td:nth-child(1)').textContent() || '';
+      const priceText = await row.locator('td:nth-child(2)').textContent() || '';
+      const quantityText = await row.locator('td:nth-child(3)').textContent() || '';
+      const subtotalText = await row.locator('td:nth-child(4)').textContent() || '';
+      const price = parseFloat(priceText.replace('$', ''));
+      const quantity = parseInt(quantityText);
+      const subtotal = parseFloat(subtotalText.replace('$', ''));
+
+      items.push({ name, price, quantity, subtotal });
+    }
+
+    return items;
+  }*/
+
+    async getCartItems(): Promise<CartItem[]> {
+  const items: CartItem[] = [];
+  const rows = this.cartTable.locator('tbody tr');
+  const count = await rows.count();
+
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+    const cells = row.locator('td');
+    
+    // Skip rows that don't have the expected structure
+    if (await cells.count() < 4) continue;
+    
+    const firstCellText = await cells.nth(0).textContent() || '';
+    
+    // Skip the total row
+    if (firstCellText.includes('Total:')) continue;
+    
+    const name = firstCellText.trim();
+    const priceText = await cells.nth(1).textContent() || '';
+    const subtotalText = await cells.nth(3).textContent() || '';
+
+    // Fix: Get quantity from the input element
+    const quantityCell = cells.nth(2);
+    let quantity = 0;
+    
+    // Try to get value from input/spinbutton first
+    const quantityInput = quantityCell.locator('input, [role="spinbutton"]');
+    if (await quantityInput.count() > 0) {
+      const inputValue = await quantityInput.inputValue();
+      quantity = parseInt(inputValue) || 0;
+    } else {
+      // Fallback to text content
+      const quantityText = await quantityCell.textContent() || '';
+      quantity = parseInt(quantityText) || 0;
+    }
+
+    const price = parseFloat(priceText.replace('$', ''));
+    const subtotal = parseFloat(subtotalText.replace('$', ''));
+
+    // Add debugging
+    console.log(`Item: ${name}, Quantity: ${quantity}, Price: ${price}, Subtotal: ${subtotal}`);
+
+    items.push({ name, price, quantity, subtotal });
+  }
+
+  return items;
+}
+
+  /*async getTotal(): Promise<number> {
+    const totalText = await this.totalElement.textContent() || '';
+    return parseFloat(totalText.replace(/[^0-9.]/g, ''));
+  }*/
+
+  async getTotal(): Promise<number> {
+  const totalSelectors = [
+    'strong:has-text("Total:")',
+    'td:has-text("Total:")',
+    '[class*="total"]',
+    'tr:last-child td:last-child'
+  ];
+  
+  for (const selector of totalSelectors) {
+    try {
+      const element = this.page.locator(selector);
+      if (await element.count() > 0) {
+        const totalText = await element.textContent() || '';
+        const number = parseFloat(totalText.replace(/[^0-9.]/g, ''));
+        if (!isNaN(number)) return number;
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+  
+  throw new Error('Could not find total element');
+}
+
+  async verifyCartCalculations(): Promise<void> {
+    const items = await this.getCartItems();
+    const total = await this.getTotal();
+
+    // Verify subtotals
+    for (const item of items) {
+      const expectedSubtotal = item.price * item.quantity;
+      expect(item.subtotal).toBeCloseTo(expectedSubtotal, 2);
+    }
+
+    // Verify total
+    const expectedTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    expect(total).toBeCloseTo(expectedTotal, 2);
+  }
+
+  async verifyProductInCart(productName: string, expectedQuantity: number, expectedPrice: number): Promise<void> {
+    const items = await this.getCartItems();
+    const item = items.find(i => i.name.includes(productName));
+    
+    expect(item).toBeDefined();
+    expect(item!.quantity).toBe(expectedQuantity);
+    expect(item!.price).toBeCloseTo(expectedPrice, 2);
+  }
+}
