@@ -17,8 +17,7 @@ export class CartPage extends BasePage {
     this.cartTable = page.locator('table');
     this.totalElement = page.locator('.total');
   }
-
-  /*async getCartItems(): Promise<CartItem[]> {
+  async getCartItems(): Promise<CartItem[]> {
     const items: CartItem[] = [];
     const rows = this.cartTable.locator('tbody tr');
     const count = await rows.count();
@@ -29,6 +28,7 @@ export class CartPage extends BasePage {
       const priceText = await row.locator('td:nth-child(2)').textContent() || '';
       const quantityText = await row.locator('td:nth-child(3)').textContent() || '';
       const subtotalText = await row.locator('td:nth-child(4)').textContent() || '';
+
       const price = parseFloat(priceText.replace('$', ''));
       const quantity = parseInt(quantityText);
       const subtotal = parseFloat(subtotalText.replace('$', ''));
@@ -37,55 +37,7 @@ export class CartPage extends BasePage {
     }
 
     return items;
-  }*/
-
-    async getCartItems(): Promise<CartItem[]> {
-  const items: CartItem[] = [];
-  const rows = this.cartTable.locator('tbody tr');
-  const count = await rows.count();
-
-  for (let i = 0; i < count; i++) {
-    const row = rows.nth(i);
-    const cells = row.locator('td');
-    
-    // Skip rows that don't have the expected structure
-    if (await cells.count() < 4) continue;
-    
-    const firstCellText = await cells.nth(0).textContent() || '';
-    
-    // Skip the total row
-    if (firstCellText.includes('Total:')) continue;
-    
-    const name = firstCellText.trim();
-    const priceText = await cells.nth(1).textContent() || '';
-    const subtotalText = await cells.nth(3).textContent() || '';
-
-    // Fix: Get quantity from the input element
-    const quantityCell = cells.nth(2);
-    let quantity = 0;
-    
-    // Try to get value from input/spinbutton first
-    const quantityInput = quantityCell.locator('input, [role="spinbutton"]');
-    if (await quantityInput.count() > 0) {
-      const inputValue = await quantityInput.inputValue();
-      quantity = parseInt(inputValue) || 0;
-    } else {
-      // Fallback to text content
-      const quantityText = await quantityCell.textContent() || '';
-      quantity = parseInt(quantityText) || 0;
-    }
-
-    const price = parseFloat(priceText.replace('$', ''));
-    const subtotal = parseFloat(subtotalText.replace('$', ''));
-
-    // Add debugging
-    console.log(`Item: ${name}, Quantity: ${quantity}, Price: ${price}, Subtotal: ${subtotal}`);
-
-    items.push({ name, price, quantity, subtotal });
   }
-
-  return items;
-}
 
   /*async getTotal(): Promise<number> {
     const totalText = await this.totalElement.textContent() || '';
@@ -133,10 +85,12 @@ export class CartPage extends BasePage {
 
   async verifyProductInCart(productName: string, expectedQuantity: number, expectedPrice: number): Promise<void> {
     const items = await this.getCartItems();
-    const item = items.find(i => i.name.includes(productName));
-    
+    //const item = items.find(i => i.name.includes(productName));
+    const normalizedProductName = productName.trim().toLowerCase();
+    const item = items.find(i => i.name.trim().toLowerCase() === normalizedProductName);
     expect(item).toBeDefined();
     expect(item!.quantity).toBe(expectedQuantity);
     expect(item!.price).toBeCloseTo(expectedPrice, 2);
   }
+
 }
