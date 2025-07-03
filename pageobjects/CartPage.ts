@@ -20,16 +20,12 @@ export class CartPage extends BasePage {
 
 async getCartItems(): Promise<CartItem[]> {
   const items: CartItem[] = [];
-  
   // Wait for the table to be loaded
   await this.page.waitForSelector('table');
-  
-  // Use more specific selector - target the main cart table directly
+  // specific selector - target the main cart table directly
   const productRows = this.page.locator('table tbody tr').filter({ has: this.page.locator('img') });
   const count = await productRows.count();
-  
-  console.log(`Found ${count} product rows`);
-
+  //console.log(`Found ${count} product rows`);
   for (let i = 0; i < count; i++) {
     const row = productRows.nth(i);
     
@@ -81,7 +77,7 @@ async getCartItems(): Promise<CartItem[]> {
     const quantity = parseInt(quantityText) || parseInt(await row.locator('td').nth(2).locator('input').getAttribute('value') || '0');
     const subtotal = parseFloat(subtotalText.replace('$', ''));
 
-    console.log(`Row ${i}: name="${name}", price="${priceText}", quantity="${quantityText}", subtotal="${subtotalText}"`);
+    //console.log(`Row ${i}: name="${name}", price="${priceText}", quantity="${quantityText}", subtotal="${subtotalText}"`);
 
     // Only add items with valid names
     if (name) {
@@ -91,7 +87,7 @@ async getCartItems(): Promise<CartItem[]> {
     }
   }
 
-  console.log(`Final items array:`, items);
+  //console.log(`Final items array:`, items);
   return items;
 }
   /*async getTotal(): Promise<number> {

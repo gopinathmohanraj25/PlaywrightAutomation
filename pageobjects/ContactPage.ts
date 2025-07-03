@@ -50,7 +50,7 @@ export class ContactPage extends BasePage {
   }
 
   async verifySuccessMessage(): Promise<void> {
-    await expect(this.successMessage).toBeVisible({ timeout: 15000 });
+    await expect(this.successMessage).toBeVisible({ timeout: 18000 });
     await expect(this.successMessage).toContainText('Thanks');
   }
 }
