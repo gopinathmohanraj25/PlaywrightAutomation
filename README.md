@@ -5,15 +5,6 @@ Page Object Model - Separate classes for HomePage, ContactPage, ShopPage, and Ca
 Encapsulation - Private locators and public methods for interactions
 Reusability - Common utilities and test data management
 
-Framework Structure:
-├── src/
-│   ├── pages/          # Page Object Model classes
-│   └── utils/          # Test data and utilities
-├── tests/              # Test specifications
-├── playwright.config.ts
-├── package.json
-└── Jenkinsfile
-
 
 Test Cases Implemented:
 
