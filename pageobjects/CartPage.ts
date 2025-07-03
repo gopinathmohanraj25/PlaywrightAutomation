@@ -17,28 +17,83 @@ export class CartPage extends BasePage {
     this.cartTable = page.locator('table');
     this.totalElement = page.locator('.total');
   }
-  async getCartItems(): Promise<CartItem[]> {
-    const items: CartItem[] = [];
-    const rows = this.cartTable.locator('tbody tr');
-    const count = await rows.count();
 
-    for (let i = 0; i < count; i++) {
-      const row = rows.nth(i);
-      const name = await row.locator('td:nth-child(1)').textContent() || '';
-      const priceText = await row.locator('td:nth-child(2)').textContent() || '';
-      const quantityText = await row.locator('td:nth-child(3)').textContent() || '';
-      const subtotalText = await row.locator('td:nth-child(4)').textContent() || '';
+async getCartItems(): Promise<CartItem[]> {
+  const items: CartItem[] = [];
+  
+  // Wait for the table to be loaded
+  await this.page.waitForSelector('table');
+  
+  // Use more specific selector - target the main cart table directly
+  const productRows = this.page.locator('table tbody tr').filter({ has: this.page.locator('img') });
+  const count = await productRows.count();
+  
+  console.log(`Found ${count} product rows`);
 
-      const price = parseFloat(priceText.replace('$', ''));
-      const quantity = parseInt(quantityText);
-      const subtotal = parseFloat(subtotalText.replace('$', ''));
-
-      items.push({ name, price, quantity, subtotal });
+  for (let i = 0; i < count; i++) {
+    const row = productRows.nth(i);
+    
+    // Extract name - try multiple approaches
+    let name = '';
+    const nameCell = row.locator('td').first();
+    
+    // Method 1: Get all text content from the cell
+    const cellText = await nameCell.textContent();
+    if (cellText && cellText.trim()) {
+      name = cellText.trim();
     }
+    
+    // Method 2: If still empty, try innerText
+    if (!name) {
+      try {
+        const innerText = await nameCell.innerText();
+        if (innerText && innerText.trim()) {
+          name = innerText.trim();
+        }
+      } catch (e) {
+        console.warn(`innerText failed for row ${i}:`, e);
+      }
+    }
+    
+    // Method 3: If still empty, try to get text specifically
+    if (!name) {
+      try {
+        const textElements = await nameCell.locator('text').all();
+        for (const textEl of textElements) {
+          const text = await textEl.textContent();
+          if (text && text.trim()) {
+            name = text.trim();
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn(`text locator failed for row ${i}:`, e);
+      }
+    }
+    
+    const priceText = await row.locator('td').nth(1).textContent() || '';
+    const quantityText = await row.locator('td').nth(2).locator('input').getAttribute('value') || '';
+    //const quantityText = await row.locator('td').nth(2).textContent() || '';
+    const subtotalText = await row.locator('td').nth(3).textContent() || '';
 
-    return items;
+    const price = parseFloat(priceText.replace('$', ''));
+    //const quantity = parseInt(quantityText);
+    const quantity = parseInt(quantityText) || parseInt(await row.locator('td').nth(2).locator('input').getAttribute('value') || '0');
+    const subtotal = parseFloat(subtotalText.replace('$', ''));
+
+    console.log(`Row ${i}: name="${name}", price="${priceText}", quantity="${quantityText}", subtotal="${subtotalText}"`);
+
+    // Only add items with valid names
+    if (name) {
+      items.push({ name, price, quantity, subtotal });
+    } else {
+      console.warn(`Could not extract name from row ${i}`);
+    }
   }
 
+  console.log(`Final items array:`, items);
+  return items;
+}
   /*async getTotal(): Promise<number> {
     const totalText = await this.totalElement.textContent() || '';
     return parseFloat(totalText.replace(/[^0-9.]/g, ''));
@@ -82,15 +137,21 @@ export class CartPage extends BasePage {
     const expectedTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
     expect(total).toBeCloseTo(expectedTotal, 2);
   }
-
-  async verifyProductInCart(productName: string, expectedQuantity: number, expectedPrice: number): Promise<void> {
-    const items = await this.getCartItems();
-    //const item = items.find(i => i.name.includes(productName));
-    const normalizedProductName = productName.trim().toLowerCase();
-    const item = items.find(i => i.name.trim().toLowerCase() === normalizedProductName);
-    expect(item).toBeDefined();
-    expect(item!.quantity).toBe(expectedQuantity);
-    expect(item!.price).toBeCloseTo(expectedPrice, 2);
+  
+ async verifyProductInCart(productName: string, expectedQuantity: number, expectedPrice: number): Promise<void> {
+  const items = await this.getCartItems();
+  //console.log('Available items:', items.map(i => i.name));
+  //console.log('Searching for:', productName);
+  
+  const item = items.find(i => i.name.includes(productName));
+  
+  if (!item) {
+    throw new Error(`Product "${productName}" not found in cart. Available products: ${items.map(i => i.name).join(', ')}`);
   }
+  
+  expect(item).toBeDefined();
+  expect(item.quantity).toBe(expectedQuantity);
+  expect(item.price).toBeCloseTo(expectedPrice, 2);
+}
 
 }
