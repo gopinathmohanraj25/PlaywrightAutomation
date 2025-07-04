@@ -14,7 +14,7 @@ A comprehensive Playwright automation framework using TypeScript with Page Objec
 ## 🏗 Project Structure
 
 ```
-playwright-jupiter-toys/
+PlaywrightAutomationAssignment/
 ├── pageobjects/           # Page Object Model classes
 │   ├── BasePage.ts        # Base page with common functionality
 │   ├── Cartpage.ts        # Cart page object
