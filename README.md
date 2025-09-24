@@ -37,7 +37,7 @@ PlaywrightAutomationAssignment/
 ## Test Cases Implemented:
 
 Test case 1:
-Contact Form Validation - Error message verification and field validation
+Contact Form Validation - Error message verification and field validations
 
 Test Case 2:
 Contact Form Submission - Runs 5 times to ensure 100% pass rate
